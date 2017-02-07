@@ -5,7 +5,6 @@ c:\users\hampz\documents\github\directx\edurend17v1_handout\source\vec\math.h(16
 c:\users\hampz\documents\github\directx\edurend17v1_handout\source\vec\math.h(48): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
 c:\users\hampz\documents\github\directx\edurend17v1_handout\source\mesh.h(67): warning C4018: '<': signed/unsigned mismatch
 c:\users\hampz\documents\github\directx\edurend17v1_handout\source\mesh.h(70): warning C4018: '<': signed/unsigned mismatch
-Main.cpp(140): warning C4305: 'argument': truncation from 'double' to 'const float'
 Main.cpp(184): warning C4996: 'freopen': This function or variable may be unsafe. Consider using freopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdio.h(240): note: see declaration of 'freopen'
 Main.cpp(185): warning C4996: 'freopen': This function or variable may be unsafe. Consider using freopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
@@ -20,7 +19,7 @@ c:\users\hampz\documents\github\directx\edurend17v1_handout\source\vec\mat.h(527
           [
               T=float
           ]
-  Main.cpp(133): note: see reference to function template instantiation 'linalg::mat4<float> linalg::mat4<float>::rotation(const T &,const T &,const T &,const T &)' being compiled
+  Main.cpp(134): note: see reference to function template instantiation 'linalg::mat4<float> linalg::mat4<float>::rotation(const T &,const T &,const T &,const T &)' being compiled
           with
           [
               T=float
@@ -29,7 +28,7 @@ c:\users\hampz\documents\github\directx\edurend17v1_handout\source\vec\mat.h(527
 c:\users\hampz\documents\github\directx\edurend17v1_handout\source\vec\vec.h(479): warning C4244: 'argument': conversion from 'double' to 'const float', possible loss of data
   c:\users\hampz\documents\github\directx\edurend17v1_handout\source\mesh.h(57): note: see reference to function template instantiation 'linalg::vec3<float> linalg::normalize<float>(const linalg::vec3<float> &)' being compiled
   Generating code
-  0 of 2404 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+  3 of 493 functions ( 0.6%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
