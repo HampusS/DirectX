@@ -51,12 +51,10 @@ void				Release();
 // Declarations
 //
 camera_t* camera;
-float camera_vel = 5.0f;	// Camera movement velocity in units/s
-Quad_t* quad;
-OBJModel_t* sponza;
+Cube* cube;
+Cube* cube_child;
+Cube* cube_grandchild;
 // Object model-to-world transformation matrices
-mat4f Msponza;
-mat4f Mquad;
 float angle = 0;			// A per-frame updated rotation angle (radians)...
 float angle_vel = fPI / 2;	// ...and its velocity
 // World-to-view matrix
@@ -64,7 +62,11 @@ mat4f Mview;
 // Projection matrix
 mat4f Mproj;
 
+mat4f Mcube;
+mat4f Mderivedcube;
+mat4f Mderivedchildcube;
 
+float camera_vel = 5.0f;	// Camera movement velocity in units/s
 vec4f lightposition;
 int selectMe = 1;
 
@@ -81,12 +83,12 @@ void initObjects()
 	
 	// Move camera to (0,0,5)
 	// The camera will look toward (0,0,0)  
-	camera->moveTo({ 0, 0, 5 });
+	camera->moveTo({ 0, 0, 25 });
 
 	// Create objects
-	quad = new Quad_t(g_Device, g_DeviceContext);
-//	obj = new OBJModel_t("../../assets/tyre/Tyre.obj", g_Device, g_DeviceContext);
-	sponza = new OBJModel_t("../../assets/crytek-sponza/sponza.obj", g_Device, g_DeviceContext);
+	cube = new Cube(g_Device, g_DeviceContext);
+	cube_child = new Cube(g_Device, g_DeviceContext);
+	cube_grandchild = new Cube(g_Device, g_DeviceContext);
 }
 
 //
@@ -128,17 +130,14 @@ void updateObjects(float dt)
 	// but the T*R*S order is most common; i.e. scale, then rotate, and then translate.
 	// If no transformation is desired, an identity matrix can be obtained 
 	// via e.g. Mquad = linalg::mat4f_identity; 
+	// Cube
+	Mcube = mat4f::translation(0, 0, 0) *					// No translation
+		mat4f::rotation(-angle, 0.0f, 1.0f, 0.0f) *		// Rotate continuously around the y-axis
+		mat4f::scaling(1.5, 1.5, 1.5);					// Scale uniformly to 150%
 	
-	// Quad
-	Mquad = mat4f::translation(0, 0, 0) *					// No translation
-			mat4f::rotation(-angle, 0.0f, 1.0f, 0.0f) *		// Rotate continuously around the y-axis
-			mat4f::scaling(1.5, 1.5, 1.5);					// Scale uniformly to 150%
-
-	// Sponza
-	Msponza =	mat4f::translation(0,-5,0) *				// Move down 5 units
-				mat4f::rotation(fPI/2, 0.0f, 1.0f, 0.0f) *	// Rotate 90 degrees
-				mat4f::scaling(0.05);						// The scene is quite large so scale it down to 5%
-
+	Mderivedcube = Mcube * (mat4f::translation(1, 2, 0)* mat4f::rotation(-angle, 1.0f, 0.0f, 0)*mat4f::scaling(1.5, 1.5, 1.5));
+	Mderivedchildcube = Mderivedcube* (mat4f::translation(2, 2, 0)* mat4f::rotation(-angle, 0, 1.0f, 0)*mat4f::scaling(1.5, 1.5, 1.5));
+	
 	// Increase the rotation angle. dt is the frame time step.
 	angle += angle_vel * dt;
 }
@@ -151,14 +150,13 @@ void renderObjects()
 	// Obtain the matrices needed for rendering from the camera
 	Mview = camera->get_WorldToViewMatrix();
 	Mproj = camera->get_ProjectionMatrix();
-
-	// Load matrices + the Quad's transformation to the device and render it
-	quad->MapMatrixBuffers(g_MatrixBuffer, Mquad, Mview, Mproj);
-	quad->render();
-	
-	// Load matrices + Sponza's transformation to the device and render it
-	sponza->MapMatrixBuffers(g_MatrixBuffer, Msponza, Mview, Mproj);
-	sponza->render();
+	// CUBE
+	cube->MapMatrixBuffers(g_MatrixBuffer, Mcube, Mview, Mproj);
+	cube->render();
+	cube_child->MapMatrixBuffers(g_MatrixBuffer, Mderivedcube, Mview, Mproj);
+	cube_child->render();
+	cube_grandchild->MapMatrixBuffers(g_MatrixBuffer, Mderivedchildcube, Mview, Mproj);
+	cube_grandchild->render();
 }
 
 //
@@ -166,9 +164,11 @@ void renderObjects()
 //
 void releaseObjects()
 {
-	SAFE_DELETE(quad);
-	SAFE_DELETE(sponza);
 	SAFE_DELETE(camera);
+	SAFE_DELETE(cube);
+	SAFE_DELETE(cube_child);
+	SAFE_DELETE(cube_grandchild);
+
 }
 
 //--------------------------------------------------------------------------------------
