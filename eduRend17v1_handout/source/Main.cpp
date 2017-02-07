@@ -135,7 +135,7 @@ void updateObjects(float dt)
 		mat4f::rotation(-angle, 0.0f, 1.0f, 0.0f) *		// Rotate continuously around the y-axis
 		mat4f::scaling(1.5, 1.5, 1.5);					// Scale uniformly to 150%
 	
-	Mderivedcube = Mcube * (mat4f::translation(1, 2, 0)* mat4f::rotation(-angle, 1.0f, 0.0f, 0)*mat4f::scaling(1.5, 1.5, 1.5));
+	Mderivedcube = Mcube * (mat4f::translation(2, 2, 0)* mat4f::rotation(-angle, 1.0f, 0.0f, 0)*mat4f::scaling(1.5, 1.5, 1.5));
 	Mderivedchildcube = Mderivedcube* (mat4f::translation(2, 2, 0)* mat4f::rotation(-angle, 0, 1.0f, 0)*mat4f::scaling(1.5, 1.5, 1.5));
 	
 	// Increase the rotation angle. dt is the frame time step.
