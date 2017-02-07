@@ -64,6 +64,10 @@ mat4f Mview;
 // Projection matrix
 mat4f Mproj;
 
+
+vec4f lightposition;
+int selectMe = 1;
+
 //
 // Initialize objects
 //
@@ -90,15 +94,34 @@ void initObjects()
 //
 void updateObjects(float dt)
 {
+	camera->RotateCamera(g_InputHandler->GetMouseDeltaY()* dt, g_InputHandler->GetMouseDeltaX()* dt);
+
 	// Basic camera control from user inputs
-	if (g_InputHandler->IsKeyPressed(Keys::Up) || g_InputHandler->IsKeyPressed(Keys::W))
-		camera->move({ 0.0f, 0.0f, -camera_vel *dt });
-	if (g_InputHandler->IsKeyPressed(Keys::Down) || g_InputHandler->IsKeyPressed(Keys::S))
-		camera->move({ 0.0f, 0.0f, camera_vel *dt });
-	if (g_InputHandler->IsKeyPressed(Keys::Right) || g_InputHandler->IsKeyPressed(Keys::D))
-		camera->move({ camera_vel *dt, 0.0f, 0.0f });
-	if (g_InputHandler->IsKeyPressed(Keys::Left) || g_InputHandler->IsKeyPressed(Keys::A))
-		camera->move({ -camera_vel *dt, 0.0f, 0.0f });
+	if (g_InputHandler->IsKeyPressed(Keys::Down))
+		selectMe = 1;
+	if (g_InputHandler->IsKeyPressed(Keys::Up))
+		selectMe = 2;
+
+	if (selectMe == 1) {
+		if (g_InputHandler->IsKeyPressed(Keys::W))
+			camera->move({ 0.0f, 0.0f, -dt });
+		if (g_InputHandler->IsKeyPressed(Keys::A))
+			camera->move({ -dt, 0.0f, 0.0f });
+		if (g_InputHandler->IsKeyPressed(Keys::S))
+			camera->move({ 0.0f, 0.0f, dt });
+		if (g_InputHandler->IsKeyPressed(Keys::D))
+			camera->move({ dt, 0.0f, 0.0f });
+	}
+	else if (selectMe == 2) {
+		if (g_InputHandler->IsKeyPressed(Keys::W))
+			lightposition.z += -dt * 25;
+		if (g_InputHandler->IsKeyPressed(Keys::A))
+			lightposition.x += -dt * 25;
+		if (g_InputHandler->IsKeyPressed(Keys::S))
+			lightposition.z += dt * 25;
+		if (g_InputHandler->IsKeyPressed(Keys::D))
+			lightposition.x += dt * 25;
+	}
 
 	// Now set/update object transformations
 	// This can be done using any sequence of transformation matrices,
