@@ -30,6 +30,8 @@ ID3D11Buffer*			g_MatrixBuffer = nullptr;
 InputHandler*			g_InputHandler = nullptr;
 
 int width, height;
+ID3D11Buffer*			g_Light_Buffer = nullptr;
+ID3D11Buffer*			g_Phong_Buffer = nullptr;
 
 //--------------------------------------------------------------------------------------
 // Forward declarations
@@ -54,6 +56,8 @@ camera_t* camera;
 Cube* cube;
 Cube* cube_child;
 Cube* cube_grandchild;
+OBJModel_t* sun;
+OBJModel_t* hand;
 // Object model-to-world transformation matrices
 float angle = 0;			// A per-frame updated rotation angle (radians)...
 float angle_vel = fPI / 2;	// ...and its velocity
@@ -65,6 +69,8 @@ mat4f Mproj;
 mat4f Mcube;
 mat4f Mderivedcube;
 mat4f Mderivedchildcube;
+mat4f Mhand;
+mat4f Msun;
 
 float camera_vel = 5.0f;	// Camera movement velocity in units/s
 vec4f lightposition;
@@ -89,6 +95,30 @@ void initObjects()
 	cube = new Cube(g_Device, g_DeviceContext);
 	cube_child = new Cube(g_Device, g_DeviceContext);
 	cube_grandchild = new Cube(g_Device, g_DeviceContext);
+	sun = new OBJModel_t("C:/Users/hampz/Desktop/assets/sphere/sphere.obj", g_Device, g_DeviceContext);
+	hand = new OBJModel_t("C:/Users/hampz/Desktop/assets/hand/hand.obj", g_Device, g_DeviceContext);
+}
+
+void SendLightBufferToPS(ID3D11Buffer* tempBuff, float4 col, float4 lightpos, float4 camerapos) {
+	D3D11_MAPPED_SUBRESOURCE resource;
+	g_DeviceContext->Map(tempBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+	PointLightBuffer_t* buffer = (PointLightBuffer_t*)resource.pData;
+	buffer->my_color = col;
+	buffer->my_pos = lightpos;
+	buffer->camera_pos = camerapos;
+
+	g_DeviceContext->Unmap(tempBuff, 0);
+}
+
+void SendPhongBufferToPS(ID3D11Buffer* tempBuff, float4 amb_color, float4 diffuse_color, float4 spec_color, float shine) {
+	D3D11_MAPPED_SUBRESOURCE resource;
+	g_DeviceContext->Map(tempBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+	PhongBuffer_t* buffer = (PhongBuffer_t*)resource.pData;
+	buffer->ambient_color = amb_color;
+	buffer->diffuse_color = diffuse_color;
+	buffer->specular_color = spec_color;
+	//buffer->shine = shine;
+	g_DeviceContext->Unmap(tempBuff, 0);
 }
 
 //
@@ -97,7 +127,8 @@ void initObjects()
 void updateObjects(float dt)
 {
 	camera->RotateCamera(g_InputHandler->GetMouseDeltaY()* dt, g_InputHandler->GetMouseDeltaX()* dt);
-
+	SendLightBufferToPS(g_Light_Buffer, { 0.1f, 0.1f, 0.5f, 0.5f }, lightposition, { camera->position.x, camera->position.y, camera->position.z, 1 });
+	SendPhongBufferToPS(g_Phong_Buffer, { 0.2f, 0.2f, 0.2f, 0.5f }, { 0.1f, 0.4f, 0.1f, 0.5f }, { 0.5f, 0.1f, 0.1f, 0.5f }, 100);
 	// Basic camera control from user inputs
 	if (g_InputHandler->IsKeyPressed(Keys::Down))
 		selectMe = 1;
@@ -130,13 +161,20 @@ void updateObjects(float dt)
 	// but the T*R*S order is most common; i.e. scale, then rotate, and then translate.
 	// If no transformation is desired, an identity matrix can be obtained 
 	// via e.g. Mquad = linalg::mat4f_identity; 
+
 	// Cube
-	Mcube = mat4f::translation(0, 0, 0) *					// No translation
+	Mcube = mat4f::translation(0, 7, 0) *					// No translation
 		mat4f::rotation(-angle, 0.0f, 1.0f, 0.0f) *		// Rotate continuously around the y-axis
 		mat4f::scaling(1.5, 1.5, 1.5);					// Scale uniformly to 150%
 	
 	Mderivedcube = Mcube * (mat4f::translation(2, 2, 0)* mat4f::rotation(-angle, 1.0f, 0.0f, 0)*mat4f::scaling(1.5, 1.5, 1.5));
 	Mderivedchildcube = Mderivedcube* (mat4f::translation(2, 2, 0)* mat4f::rotation(-angle, 0, 1.0f, 0)*mat4f::scaling(1.5, 1.5, 1.5));
+
+	//SUN & HAND
+	Msun = mat4f::translation(lightposition.x, lightposition.y, lightposition.z);
+	Mhand = mat4f::translation(0, -5, 0) *
+		mat4f::rotation(0.0f, 0.0f, 1.0f, 0.0f) *
+		mat4f::scaling(15, 15, 15);
 	
 	// Increase the rotation angle. dt is the frame time step.
 	angle += angle_vel * dt;
@@ -157,6 +195,12 @@ void renderObjects()
 	cube_child->render();
 	cube_grandchild->MapMatrixBuffers(g_MatrixBuffer, Mderivedchildcube, Mview, Mproj);
 	cube_grandchild->render();
+	//HAND
+	hand->MapMatrixBuffers(g_MatrixBuffer, Mhand, Mview, Mproj);
+	hand->render();
+	//SUN
+	sun->MapMatrixBuffers(g_MatrixBuffer, Msun, Mview, Mproj);
+	sun->render();
 }
 
 //
@@ -495,6 +539,28 @@ void InitShaderBuffers()
 	MatrixBuffer_desc.StructureByteStride = 0;
 
 	ASSERT(hr = g_Device->CreateBuffer(&MatrixBuffer_desc, nullptr, &g_MatrixBuffer));
+
+	// Light buffer
+	D3D11_BUFFER_DESC LightBuffer_desc = { 0 };
+	LightBuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
+	LightBuffer_desc.ByteWidth = sizeof(PointLightBuffer_t);
+	LightBuffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	LightBuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	LightBuffer_desc.MiscFlags = 0;
+	LightBuffer_desc.StructureByteStride = 0;
+
+	ASSERT(hr = g_Device->CreateBuffer(&LightBuffer_desc, nullptr, &g_Light_Buffer));
+
+	// Phong buffer
+	D3D11_BUFFER_DESC PhongBuffer_desc = { 1 };
+	PhongBuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
+	PhongBuffer_desc.ByteWidth = sizeof(PhongBuffer_t);
+	PhongBuffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	PhongBuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	PhongBuffer_desc.MiscFlags = 0;
+	PhongBuffer_desc.StructureByteStride = 0;
+
+	ASSERT(hr = g_Device->CreateBuffer(&PhongBuffer_desc, nullptr, &g_Phong_Buffer));
 }
 
 HRESULT CreateRenderTargetView()
@@ -587,6 +653,8 @@ HRESULT Render(float deltaTime)
 	
 	// set matrix buffers
 	g_DeviceContext->VSSetConstantBuffers(0, 1, &g_MatrixBuffer);
+	g_DeviceContext->PSSetConstantBuffers(0, 1, &g_Light_Buffer);
+	g_DeviceContext->PSSetConstantBuffers(1, 1, &g_Phong_Buffer);
 
 	// time to render our objects
 	renderObjects();

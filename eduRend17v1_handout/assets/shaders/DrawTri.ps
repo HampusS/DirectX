@@ -1,9 +1,21 @@
+cbuffer LightBuffer : register(b0){
+	float4 a_light_color;
+	float4 light_pos;
+	float4 camera_pos;
+};
+
+cbuffer PhongBuffer : register(b1){
+	float4 ambient_color;
+	float4 diffuse_color;
+	float4 specular_color;
+}
 
 struct PSIn
 {
 	float4 Pos  : SV_Position;
 	float3 Normal : NORMAL;
 	float2 TexCoord : TEX;
+	float3 WorldPos : WORLDPOS;
 };
 
 //-----------------------------------------------------------------------------------------
@@ -14,8 +26,39 @@ float4 PS_main(PSIn input) : SV_Target
 {	
 	// Debug shading #1: map and return normal as a color, i.e. from [-1,1]->[0,1] per component
 	// The 4:th component is opacity and should be = 1
-	return float4(input.Normal*0.5+0.5, 1);
+
+	float4 Ambient = ambient_color + a_light_color;
+	float3 L = (float3)(light_pos - input.WorldPos);
+	float3 V = normalize(camera_pos - input.WorldPos);
+	input.Normal = normalize(input.Normal);
+	L = normalize(L);
+
+	//LAMBERT-------------------------------------------------
+	float Lambert = dot(L, input.Normal);
+	float reach = max(diffuse_color * Lambert, 0);
+	float4 Diffuse = diffuse_color * Lambert;
+	//--------------------------------------------------------
+		
+	//PHONG---------------------------------------------------
+	//float3 R = reflect(normalize(L), normalize(input.Normal));
+	//float Phong = dot(R, V);
+	//--------------------------------------------------------
+
+	//BLINN PHONG --------------------------
+	float3 R = normalize( L + V );
+	float Phong = dot(input.Normal, R);
+	//---------------------------------------
+
+	Phong = pow(abs(Phong), 300);
+	float4 Specular = specular_color * Phong;
+
+	if(reach == 0)
+	 Specular = 0;
+
+	return Ambient + Diffuse + Specular;
+
 	
 	// Debug shading #2: map and return texture coordinates as a color (blue = 0)
+	//return float4(input.Normal*0.5+0.5, 1);
 	//return float4(input.TexCoord, 0, 1);
 }
